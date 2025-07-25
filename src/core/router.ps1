@@ -4,7 +4,7 @@ function Get-Actions {
     param( $arguments )
 
     $script:arguments = $arguments
-    
+
     return [ordered]@{
         "setup" = [PSCustomObject]@{ command = "pvm setup [--overwrite-path-backup]"; description = "Setup the environment variables and paths for PHP. Use '--overwrite-path-backup' to overwrite the existing backup of the PATH variable."; action = {
 
@@ -22,17 +22,17 @@ function Get-Actions {
                 if (-not (Is-PVM-Setup)) {
                     $exitCode = Setup-PVM
                     if ($exitCode -eq 0) {
-                        $output = Optimize-SystemPath -shouldOverwrite $shouldOverwrite 
+                        $output = Optimize-SystemPath -shouldOverwrite $shouldOverwrite
                     }
                 }
             }
-            
+
             if ($output -eq 0) {
                 Write-Host "`nOriginal PATH variable saved to $PATH_VAR_BACKUP_PATH"
             } else {
                 Write-Host "`nFailed to log the original PATH variable."
             }
-            
+
             if ($exitCode -eq 1) {
                 Write-Host "`nPATH already contains PVM and PHP environment reference."
                 exit $exitCode
@@ -40,19 +40,19 @@ function Get-Actions {
                 Display-Msg-By-ExitCode -msgSuccess "`nPVM has been setup successfully" -msgError "`nFailed to setup PVM" -exitCode $exitCode
             }
         }}
-        "current" = [PSCustomObject]@{ command = "pvm current"; description = "Display active version."; action = { 
+        "current" = [PSCustomObject]@{ command = "pvm current"; description = "Display active version."; action = {
             $result = Get-Current-PHP-Version
             if (-not $result.version) {
                 Write-Host "`nNo PHP version is currently set. Please use 'pvm use <version>' to set a version."
                 exit 1
             }
             Write-Host "`nRunning version: PHP $($result.version)"
-            
+
             if (-not $result.status) {
                 Write-Host "No status information available for the current PHP version." -ForegroundColor Yellow
                 exit 1
             }
-            
+
             foreach ($ext in $result.status.Keys) {
                 if ($result.status[$ext]) {
                     Write-Host "- $ext is enabled" -ForegroundColor DarkGreen
@@ -60,7 +60,7 @@ function Get-Actions {
                     Write-Host "- $ext is disabled" -ForegroundColor DarkYellow
                 }
             }
-            
+
             Write-Host $msg
         }}
         "list" = [PSCustomObject]@{ command = "pvm list [available [-f or --force]]"; description = "Type 'available' to list installable items. Add '-f' or '--force' to force reload from source."; action = {
@@ -71,7 +71,7 @@ function Get-Actions {
             }
         }}
         "install" = [PSCustomObject]@{ command = "pvm install <version> [--xdebug] [--opcache] [--dir=/abs/path/]"; description = "The version must be a specific version. '--xdebug/--opcach' to enable xdebug/opcache. '--dir' to specify a custom installation directory."; action = {
-            $version = $arguments[0]        
+            $version = $arguments[0]
             if (-not $version) {
                 Write-Host "`nPlease provide a PHP version to install"
                 exit 1
@@ -126,6 +126,11 @@ function Get-Actions {
                 Write-Host "`nPlease provide a PHP version to use"
                 exit 1
             }
+
+            if (-not (Is-PHP-Installed -version $version)) {
+                Install-PHP -version $version
+            }
+
             if (-not (Is-Admin)) {
                 # Relaunch as administrator with hidden window
                 $arguments = "-ExecutionPolicy Bypass -File `"$PVMEntryPoint`" use `"$version`""
@@ -139,7 +144,7 @@ function Get-Actions {
             Display-Msg-By-ExitCode -msgSuccess "`nNow using PHP $version" -msgError "`nFailed to switch to PHP $version" -exitCode $exitCode
         }}
         "toggle" = [PSCustomObject]@{ command = "pvm toggle [xdebug / opcach]"; description = "Toggle the specified extension on or off."; action = {
-            
+
             $extensionsNames = $arguments
             if (-not $extensionsNames -or $extensionsNames.Count -eq 0) {
                 Write-Host "`nPlease specify at least one extension to toggle (xdebug or opcache)."
@@ -153,7 +158,7 @@ function Get-Actions {
             }
 
             $result = Toggle-PHP-Extension -extensionsNames $extensionsNames
-            
+
             Write-Host "`nToggled extensions:"
             foreach ($ext in $result.status.Keys) {
                 if ($result.status[$ext]) {
@@ -162,13 +167,13 @@ function Get-Actions {
                     Write-Host "- $ext is disabled" -ForegroundColor DarkYellow
                 }
             }
-            
+
             Display-Msg-By-ExitCode -msgSuccess "`nExtensions toggled successfully." -msgError "`nFailed to toggle extensions" -exitCode $result.exitCode
-        }} 
+        }}
         "set" = [PSCustomObject]@{ command = "pvm set <name> <value>"; description = "Set a new evironment variable for a PHP version."; action = {
             $varName = $arguments[0]
             $varValue = $arguments[1]
-            
+
             if (-not $varName) {
                 Write-Host "`nPlease provide an environment variable name"
                 exit 1
@@ -176,7 +181,7 @@ function Get-Actions {
             if (-not $varValue) {
                 Write-Host "`nPlease provide an environment variable value"
                 exit 1
-            }          
+            }
             if (-not (Is-Admin)) {
                 $arguments = "-ExecutionPolicy Bypass -File `"$PVMEntryPoint`" set `"$varName`" `"$varValue`""
                 $process = Start-Process powershell -ArgumentList $arguments -Verb RunAs -WindowStyle Hidden -PassThru
