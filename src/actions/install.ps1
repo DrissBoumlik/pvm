@@ -101,7 +101,7 @@ function Download-PHP {
         $fileName = $versionObject.fileName
         $version = $versionObject.version
 
-        $destination = "$STORAGE_PATH\php"
+        $destination = $PHP_VERSIONS_PATH
         if ($customDir) {
             $destination = $customDir
         }
